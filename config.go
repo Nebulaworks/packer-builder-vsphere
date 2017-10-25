@@ -9,14 +9,14 @@ import (
 )
 
 type Config struct {
-	common.PackerConfig 	`mapstructure:",squash"`
-	ConnectConfig 			`mapstructure:",squash"`
-	CloneConfig 			`mapstructure:",squash"`
-	HardwareConfig 			`mapstructure:",squash"`
-	Comm communicator.Config 	`mapstructure:",squash"`
-	ShutdownConfig         	`mapstructure:",squash"`
-	CreateSnapshot    bool 	`mapstructure:"create_snapshot"`
-	ConvertToTemplate bool 	`mapstructure:"convert_to_template"`
+	common.PackerConfig `mapstructure:",squash"`
+	ConnectConfig       `mapstructure:",squash"`
+	CloneConfig         `mapstructure:",squash"`
+	HardwareConfig      `mapstructure:",squash"`
+	Comm                communicator.Config `mapstructure:",squash"`
+	ShutdownConfig      `mapstructure:",squash"`
+	CreateSnapshot      bool `mapstructure:"create_snapshot"`
+	ConvertToTemplate   bool `mapstructure:"convert_to_template"`
 
 	ctx interpolate.Context
 }
