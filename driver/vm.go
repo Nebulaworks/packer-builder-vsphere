@@ -251,11 +251,7 @@ func (vm *VirtualMachine) PowerOn() error {
 }
 
 func (vm *VirtualMachine) WaitForIP() (string, error) {
-	ip, err := vm.vm.WaitForIP(vm.driver.ctx)
-	if err != nil {
-		return "", err
-	}
-	return ip, nil
+	return vm.vm.WaitForIP(vm.driver.ctx)
 }
 
 func (vm *VirtualMachine) PowerOff() error {
@@ -313,8 +309,7 @@ func (vm *VirtualMachine) CreateSnapshot(name string) error {
 }
 
 func (vm *VirtualMachine) ConvertToTemplate() error {
-	err := vm.vm.MarkAsTemplate(vm.driver.ctx)
-	return err
+	return vm.vm.MarkAsTemplate(vm.driver.ctx)
 }
 
 func (config HardwareConfig) toConfigSpec() types.VirtualMachineConfigSpec {
