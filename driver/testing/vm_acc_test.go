@@ -42,6 +42,40 @@ func initVMAccTest(t *testing.T) (d *driver.Driver, vm *driver.VirtualMachine, v
 	return
 }
 
+// FIXME
+func TestVMAcc_REMOVEME_create(t *testing.T) {
+	initDriverAcceptanceTest(t)
+
+	d := NewTestDriver(t)
+	_, err := d.CreateVM(&driver.CreateConfig{
+		HardwareConfig: driver.HardwareConfig {
+			CPUs: TestCPUs,
+			CPUReservation: TestCPUReservation,
+			CPULimit: TestCPULimit,
+			RAM: TestRAM,
+			RAMReservation: TestRAMReservation,
+			RAMReserveAll: false,
+		},
+
+		DiskConfig: driver.DiskConfig {
+			DiskSizeKB: 1024,
+			ThinProvisioned: true,
+		},
+
+		CdromConfig: driver.CdromConfig {
+			ISO: "ISO/alpine-standard-3.6.2-x86_64.iso",
+		},
+
+		Name: NewVMName(),
+		Host: TestHost,
+		GuestOS: "otherGuest",
+	})
+
+	if err != nil {
+		t.Fatalf("FAIL: %v", err) // FIXME
+	}
+}
+
 func TestVMAcc_default(t *testing.T) {
 	d, vm, vmName, vmDestructor := initVMAccTest(t)
 	defer vmDestructor()

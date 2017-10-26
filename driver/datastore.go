@@ -29,6 +29,17 @@ func (d *Driver) FindDatastore(name string) (*Datastore, error) {
 	}, nil
 }
 
+func (d *Driver) FindDatastoreOrDefault(name string) (*Datastore, error) {
+	ds, err := d.finder.DatastoreOrDefault(d.ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return &Datastore{
+		ds:     ds,
+		driver: d,
+	}, nil
+}
+
 func (ds *Datastore) Info(params ...string) (*mo.Datastore, error) {
 	var p []string
 	if len(params) == 0 {

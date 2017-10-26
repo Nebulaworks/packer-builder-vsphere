@@ -34,12 +34,12 @@ type HardwareConfig struct {
 
 type DiskConfig struct {
 	DiskSizeKB      int64
-	ThinProvisioned bool // ex: Thin Provision
+	ThinProvisioned bool
 	// TODO: more settings?
 }
 
 type CdromConfig struct {
-	//ISO          string
+	ISO          string
 	//ISODatastore string
 	// TODO: more settings?
 }
@@ -97,7 +97,7 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 		return nil, err // TODO
 	}
 
-	datastore, err := host.getDatastore(config.Datastore)
+	datastore, err := d.FindDatastoreOrDefault(config.Datastore)
 	if err != nil {
 		return nil, err // TODO
 	}
@@ -107,33 +107,32 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 		vmxPath := fmt.Sprintf("%s/%s.vmx", config.Name, config.Name)
 		if datastore.FileExists(vmxPath) {
 			dsPath := datastore.Path(vmxPath)
-			return nil, fmt.Errorf("File %s already exists", dsPath)
+			return nil, fmt.Errorf("File '%v' already exists", dsPath)
 		}
 	}
 
 	devices := object.VirtualDeviceList{}
 
+	devices, err = addCdrom(d, devices, config, datastore)
+	if err != nil {
+		return nil, err
+	}
 	devices, err = addDisk(d, devices, config)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 	devices, err = addNetwork(d, devices, config)
 	if err != nil {
-		return nil, err // TODO
-	}
-	devices, err = addCdrom(d, devices, config)
-	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	createSpec.DeviceChange, err = devices.ConfigSpec(types.VirtualDeviceConfigSpecOperationAdd)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	createSpec.Files = &types.VirtualMachineFileInfo{
 		VmPathName: fmt.Sprintf("[%s]", datastore.Name()),
-		// TODO: anything else?
 	}
 
 	task, err := folder.folder.CreateVM(d.ctx, createSpec, resourcePool.pool, host.host)
@@ -179,11 +178,10 @@ func (template *VirtualMachine) Clone(config *CloneConfig) (*VirtualMachine, err
 	poolRef := pool.pool.Reference()
 	relocateSpec.Pool = &poolRef
 
-	host, err := template.driver.FindHost(config.Host)
+	datastore, err := template.driver.FindDatastoreOrDefault(config.Datastore)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
-	datastore, err := host.getDatastore(config.Datastore)
 	datastoreRef := datastore.ds.Reference()
 	relocateSpec.Datastore = &datastoreRef
 
@@ -338,23 +336,6 @@ func (config CreateConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 	return confSpec
 }
 
-func (h *Host) getDatastore(name string) (*Datastore, error) {
-	if name == "" {
-		info, err := h.Info("datastore")
-		if err != nil {
-			return nil, err // TODO
-		}
-
-		if len(info.Datastore) > 1 {
-			return nil, fmt.Errorf("Target host has several datastores. Specify 'datastore' parameter explicitly")
-		}
-
-		return h.driver.NewDatastore(&info.Datastore[0]), nil
-	} else {
-		return h.driver.FindDatastore(name)
-	}
-}
-
 func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
 	// TODO: controller type should be customizable
 	device, err := devices.CreateSCSIController("scsi")
@@ -414,26 +395,24 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 	return append(devices, device), nil
 }
 
-func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
-	device, err := devices.CreateIDEController()
-	if err != nil {
-		return nil, err
-	}
-	devices = append(devices, device)
-
-	ide, err := devices.FindIDEController("")
-	if err != nil {
-		return nil, err
-	}
-
-	cdrom, err := devices.CreateCdrom(ide)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: insert iso?
-	//cdrom = devices.InsertIso(cdrom, isoDatastore.Path(config.ISO))
-	devices = append(devices, cdrom)
-
+func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
+		datastore *Datastore) (object.VirtualDeviceList, error) {
+	// FIXME: doesn't work. See https://github.com/vmware/govmomi/issues/721 and https://sourceforge.net/p/viperltoolkit/support-requests/2/
+	//ideDevice, err := devices.CreateIDEController()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//devices = append(devices, ideDevice)
+	//
+	//ide := ideDevice.(*types.VirtualIDEController)
+	//ide.Key = -21
+	//cdrom, err := devices.CreateCdrom(ide)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//cdrom = devices.InsertIso(cdrom, datastore.Path(config.ISO))
+	//devices = append(devices, cdrom)
+	//
 	return devices, nil
 }
