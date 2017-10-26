@@ -184,7 +184,8 @@ func (template *VirtualMachine) Clone(config *CloneConfig) (*VirtualMachine, err
 		return nil, err // TODO
 	}
 	datastore, err := host.getDatastore(config.Datastore)
-	relocateSpec.Datastore = &datastore.ds.Reference()
+	datastoreRef := datastore.ds.Reference()
+	relocateSpec.Datastore = &datastoreRef
 
 	var cloneSpec types.VirtualMachineCloneSpec
 	cloneSpec.Location = relocateSpec
@@ -214,8 +215,8 @@ func (template *VirtualMachine) Clone(config *CloneConfig) (*VirtualMachine, err
 		return nil, err
 	}
 
-	ref := info.Result.(types.ManagedObjectReference)
-	vm := template.driver.NewVM(&ref)
+	vmRef := info.Result.(types.ManagedObjectReference)
+	vm := template.driver.NewVM(&vmRef)
 	return vm, nil
 }
 
@@ -376,7 +377,7 @@ func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) 
 		return nil, fmt.Errorf("not implemented")
 	}
 
-	disk := &types.VirtualDisk {
+	disk := &types.VirtualDisk{
 		VirtualDevice: types.VirtualDevice{
 			Key: devices.NewKey(),
 			Backing: &types.VirtualDiskFlatVer2BackingInfo{
@@ -398,7 +399,7 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 	// FIXME: low-level calls shouldn't be here
 	// TODO: add customization. Use `NetworkOrDefault` function
 	network, err := d.finder.DefaultNetwork(d.ctx)
-	if  err != nil {
+	if err != nil {
 		return nil, err
 	}
 
