@@ -49,6 +49,9 @@ func (ds *Datastore) FileExists(path string) bool {
 	return err == nil
 }
 
+func (ds *Datastore) Name() string {
+	return ds.ds.Name()
+}
 
 func (ds *Datastore) Path(path string) string {
 	return ds.ds.Path(path)

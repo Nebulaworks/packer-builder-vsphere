@@ -35,12 +35,19 @@ type HardwareConfig struct {
 type DiskConfig struct {
 	DiskSizeKB      int64
 	ThinProvisioned bool // ex: Thin Provision
-	// TODO: more settings
+	// TODO: more settings?
+}
+
+type CdromConfig struct {
+	//ISO          string
+	//ISODatastore string
+	// TODO: more settings?
 }
 
 type CreateConfig struct {
 	HardwareConfig
 	DiskConfig
+	CdromConfig
 
 	Annotation   string
 	Name         string
@@ -90,7 +97,7 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 		return nil, err // TODO
 	}
 
-	datastore, err := getDatastoreOrDefault(d, host, config.Datastore)
+	datastore, err := host.getDatastore(config.Datastore)
 	if err != nil {
 		return nil, err // TODO
 	}
@@ -106,13 +113,16 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 
 	devices := object.VirtualDeviceList{}
 
-	if err = addDisk(&devices, config); err != nil {
+	devices, err = addDisk(d, devices, config)
+	if err != nil {
 		return nil, err // TODO
 	}
-	if err = addNetwork(&devices, config); err != nil {
+	devices, err = addNetwork(d, devices, config)
+	if err != nil {
 		return nil, err // TODO
 	}
-	if err = addDrive(&devices, config); err != nil {
+	devices, err = addCdrom(d, devices, config)
+	if err != nil {
 		return nil, err // TODO
 	}
 
@@ -121,11 +131,10 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 		return nil, err // TODO
 	}
 
-	/*
-	spec.Files = &types.VirtualMachineFileInfo{
+	createSpec.Files = &types.VirtualMachineFileInfo{
 		VmPathName: fmt.Sprintf("[%s]", datastore.Name()),
+		// TODO: anything else?
 	}
-	*/
 
 	task, err := folder.folder.CreateVM(d.ctx, createSpec, resourcePool.pool, host.host)
 	if err != nil {
@@ -170,32 +179,12 @@ func (template *VirtualMachine) Clone(config *CloneConfig) (*VirtualMachine, err
 	poolRef := pool.pool.Reference()
 	relocateSpec.Pool = &poolRef
 
-	if config.Datastore == "" {
-		host, err := template.driver.FindHost(config.Host)
-		if err != nil {
-			return nil, err
-		}
-
-		info, err := host.Info("datastore")
-		if err != nil {
-			return nil, err
-		}
-
-		if len(info.Datastore) > 1 {
-			return nil, fmt.Errorf("Target host has several datastores. Specify 'datastore' parameter explicitly")
-		}
-
-		ref := info.Datastore[0].Reference()
-		relocateSpec.Datastore = &ref
-	} else {
-		ds, err := template.driver.FindDatastore(config.Datastore)
-		if err != nil {
-			return nil, err
-		}
-
-		ref := ds.ds.Reference()
-		relocateSpec.Datastore = &ref
+	host, err := template.driver.FindHost(config.Host)
+	if err != nil {
+		return nil, err // TODO
 	}
+	datastore, err := host.getDatastore(config.Datastore)
+	relocateSpec.Datastore = &datastore.ds.Reference()
 
 	var cloneSpec types.VirtualMachineCloneSpec
 	cloneSpec.Location = relocateSpec
@@ -353,58 +342,45 @@ func (config CreateConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 	return confSpec
 }
 
-func getDatastoreOrDefault(d *Driver, host *Host, name string) (*Datastore, error) {
-	// TODO
-	/*if config.Datastore == "" {
-		host, err := template.driver.FindHost(config.Host)
+func (h *Host) getDatastore(name string) (*Datastore, error) {
+	if name == "" {
+		info, err := h.Info("datastore")
 		if err != nil {
-			return nil, err
-		}
-
-		info, err := host.Info("datastore")
-		if err != nil {
-			return nil, err
+			return nil, err // TODO
 		}
 
 		if len(info.Datastore) > 1 {
 			return nil, fmt.Errorf("Target host has several datastores. Specify 'datastore' parameter explicitly")
 		}
 
-		ref := info.Datastore[0].Reference()
-		relocateSpec.Datastore = &ref
+		return h.driver.NewDatastore(&info.Datastore[0]), nil
 	} else {
-		ds, err := template.driver.FindDatastore(config.Datastore)
-		if err != nil {
-			return nil, err
-		}
-
-		ref := ds.ds.Reference()
-		relocateSpec.Datastore = &ref
-	}*/
-	return nil, fmt.Errorf("not implemented")
+		return h.driver.FindDatastore(name)
+	}
 }
 
-func addDisk(devices *object.VirtualDeviceList, config *CreateConfig) error {
-	// FIXME: controller type should be customizable
+func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
+	// TODO: controller type should be customizable
 	device, err := devices.CreateSCSIController("scsi")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	*devices = append(*devices, device)
+	devices = append(devices, device)
 	controller, err := devices.FindDiskController(devices.Name(device))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if config.DiskSizeKB == 0 {
-		return fmt.Errorf("zero sized disk not supported") // FIXME
+		// TODO
+		return nil, fmt.Errorf("not implemented")
 	}
 
 	disk := &types.VirtualDisk {
 		VirtualDevice: types.VirtualDevice{
 			Key: devices.NewKey(),
 			Backing: &types.VirtualDiskFlatVer2BackingInfo{
-				DiskMode:        string(types.VirtualDiskModePersistent), // FIXME: should be customizable?
+				DiskMode:        string(types.VirtualDiskModePersistent), // TODO: should be customizable?
 				ThinProvisioned: types.NewBool(config.ThinProvisioned),
 			},
 		},
@@ -412,17 +388,56 @@ func addDisk(devices *object.VirtualDeviceList, config *CreateConfig) error {
 	}
 
 	devices.AssignController(disk, controller)
-	*devices = append(*devices, disk)
+	devices = append(devices, disk)
 
-	return nil
+	return devices, nil
 }
 
-func addNetwork(devices *object.VirtualDeviceList, config *CreateConfig) error {
-	// TODO
-	return fmt.Errorf("not implemented")
+func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
+	// TODO: settings
+	// FIXME: low-level calls shouldn't be here
+	// TODO: add customization. Use `NetworkOrDefault` function
+	network, err := d.finder.DefaultNetwork(d.ctx)
+	if  err != nil {
+		return nil, err
+	}
+
+	// FIXME: what is this?
+	backing, err := network.EthernetCardBackingInfo(d.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	device, err := object.EthernetCardTypes().CreateEthernetCard("" /*TODO: Add customization*/, backing)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: add address customization
+
+	return append(devices, device), nil
 }
 
-func addDrive(devices *object.VirtualDeviceList, config *CreateConfig) error {
-	// TODO
-	return fmt.Errorf("not implemented")
+func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
+	device, err := devices.CreateIDEController()
+	if err != nil {
+		return nil, err
+	}
+	devices = append(devices, device)
+
+	ide, err := devices.FindIDEController("")
+	if err != nil {
+		return nil, err
+	}
+
+	cdrom, err := devices.CreateCdrom(ide)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: insert iso?
+	//cdrom = devices.InsertIso(cdrom, isoDatastore.Path(config.ISO))
+	devices = append(devices, cdrom)
+
+	return devices, nil
 }
