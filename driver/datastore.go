@@ -43,3 +43,13 @@ func (ds *Datastore) Info(params ...string) (*mo.Datastore, error) {
 	}
 	return &info, nil
 }
+
+func (ds *Datastore) FileExists(path string) bool {
+	_, err := ds.ds.Stat(ds.driver.ctx, path)
+	return err == nil
+}
+
+
+func (ds *Datastore) Path(path string) string {
+	return ds.ds.Path(path)
+}

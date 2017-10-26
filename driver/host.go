@@ -5,6 +5,7 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/govmomi/vim25/mo"
 	"fmt"
+	"github.com/vmware/govmomi/govc/host"
 )
 
 type Host struct {
