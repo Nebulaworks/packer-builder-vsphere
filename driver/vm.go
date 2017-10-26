@@ -32,8 +32,15 @@ type HardwareConfig struct {
 	RAMReserveAll  bool
 }
 
+type DiskConfig struct {
+	DiskSizeKB      int64
+	ThinProvisioned bool // ex: Thin Provision
+	// TODO: more settings
+}
+
 type CreateConfig struct {
 	HardwareConfig
+	DiskConfig
 
 	Annotation   string
 	Name         string
@@ -41,9 +48,8 @@ type CreateConfig struct {
 	Host         string
 	ResourcePool string
 	Datastore    string
+	GuestOS      string // def: otherGuest
 	Force        bool
-	ISO          string
-	ISODatastore string
 }
 
 func (d *Driver) NewVM(ref *types.ManagedObjectReference) *VirtualMachine {
@@ -67,7 +73,18 @@ func (d *Driver) FindVM(name string) (*VirtualMachine, error) {
 func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 	// See: vendor/github.com/vmware/govmomi/govc/vm/create.go
 
-	// TODO: should parameter 'Host' be optional?
+	createSpec := config.toConfigSpec()
+
+	folder, err := d.FindFolder(config.Folder)
+	if err != nil {
+		return nil, err
+	}
+
+	resourcePool, err := d.FindResourcePool(config.Host, config.ResourcePool)
+	if err != nil {
+		return nil, err
+	}
+
 	host, err := d.FindHost(config.Host)
 	if err != nil {
 		return nil, err // TODO
@@ -87,74 +104,40 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 		}
 	}
 
-	createSpec := config.toConfigSpec()
+	devices := object.VirtualDeviceList{}
 
-	folder, err := d.FindFolder(config.Folder)
-	if err != nil {
-		return nil, err
+	if err = addDisk(&devices, config); err != nil {
+		return nil, err // TODO
+	}
+	if err = addNetwork(&devices, config); err != nil {
+		return nil, err // TODO
+	}
+	if err = addDrive(&devices, config); err != nil {
+		return nil, err // TODO
 	}
 
-	resourcePool, err := d.FindResourcePool(config.Host, config.ResourcePool)
+	createSpec.DeviceChange, err = devices.ConfigSpec(types.VirtualDeviceConfigSpecOperationAdd)
 	if err != nil {
-		return nil, err
+		return nil, err // TODO
 	}
 
 	/*
-	devices, err = cmd.addStorage(nil)
-	if err != nil {
-		return nil, err
+	spec.Files = &types.VirtualMachineFileInfo{
+		VmPathName: fmt.Sprintf("[%s]", datastore.Name()),
 	}
-
-	devices, err = cmd.addNetwork(devices)
-	if err != nil {
-		return nil, err
-	}
-
-	deviceChange, err := devices.ConfigSpec(types.VirtualDeviceConfigSpecOperationAdd)
-	if err != nil {
-		return nil, err
-	}
-
-	spec.DeviceChange = deviceChange
 	*/
 
-	folder.folder.CreateVM(d.ctx, createSpec, resourcePool.pool, host.host)
-
-/*
-	// BACKLOG
-
-	var cloneSpec types.VirtualMachineCloneSpec
-	cloneSpec.Location = relocateSpec
-	cloneSpec.PowerOn = false
-
-	if config.LinkedClone == true {
-		cloneSpec.Location.DiskMoveType = "createNewChildDiskBacking"
-
-		tpl, err := template.Info("snapshot")
-		if err != nil {
-			return nil, err
-		}
-		if tpl.Snapshot == nil {
-			err = errors.New("`linked_clone=true`, but template has no snapshots")
-			return nil, err
-		}
-		cloneSpec.Snapshot = tpl.Snapshot.CurrentSnapshot
+	task, err := folder.folder.CreateVM(d.ctx, createSpec, resourcePool.pool, host.host)
+	if err != nil {
+		return nil, err // TODO
 	}
-
-	task, err := template.vm.Clone(template.driver.ctx, folder.folder, config.Name, cloneSpec)
+	taskInfo, err := task.WaitForResult(d.ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := task.WaitForResult(template.driver.ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	ref := info.Result.(types.ManagedObjectReference)
-	vm := template.driver.NewVM(&ref)
-	return vm, nil
-*/
+	vmRef := taskInfo.Result.(types.ManagedObjectReference)
+	return d.NewVM(&vmRef), nil
 }
 
 func (vm *VirtualMachine) Info(params ...string) (*mo.VirtualMachine, error) {
@@ -366,6 +349,7 @@ func (config CreateConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 	confSpec := config.HardwareConfig.toConfigSpec()
 	confSpec.Name = config.Name
 	confSpec.Annotation = config.Annotation
+	confSpec.GuestId = config.GuestOS
 	return confSpec
 }
 
@@ -398,4 +382,47 @@ func getDatastoreOrDefault(d *Driver, host *Host, name string) (*Datastore, erro
 		relocateSpec.Datastore = &ref
 	}*/
 	return nil, fmt.Errorf("not implemented")
+}
+
+func addDisk(devices *object.VirtualDeviceList, config *CreateConfig) error {
+	// FIXME: controller type should be customizable
+	device, err := devices.CreateSCSIController("scsi")
+	if err != nil {
+		return err
+	}
+	*devices = append(*devices, device)
+	controller, err := devices.FindDiskController(devices.Name(device))
+	if err != nil {
+		return err
+	}
+
+	if config.DiskSizeKB == 0 {
+		return fmt.Errorf("zero sized disk not supported") // FIXME
+	}
+
+	disk := &types.VirtualDisk {
+		VirtualDevice: types.VirtualDevice{
+			Key: devices.NewKey(),
+			Backing: &types.VirtualDiskFlatVer2BackingInfo{
+				DiskMode:        string(types.VirtualDiskModePersistent), // FIXME: should be customizable?
+				ThinProvisioned: types.NewBool(config.ThinProvisioned),
+			},
+		},
+		CapacityInKB: config.DiskSizeKB,
+	}
+
+	devices.AssignController(disk, controller)
+	*devices = append(*devices, disk)
+
+	return nil
+}
+
+func addNetwork(devices *object.VirtualDeviceList, config *CreateConfig) error {
+	// TODO
+	return fmt.Errorf("not implemented")
+}
+
+func addDrive(devices *object.VirtualDeviceList, config *CreateConfig) error {
+	// TODO
+	return fmt.Errorf("not implemented")
 }
