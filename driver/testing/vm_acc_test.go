@@ -3,8 +3,8 @@ package testing
 import (
 	"github.com/jetbrains-infra/packer-builder-vsphere/driver"
 	"log"
-	"testing"
 	"net"
+	"testing"
 	"time"
 )
 
@@ -48,22 +48,23 @@ func TestVMAcc_REMOVEME_create(t *testing.T) {
 
 	d := NewTestDriver(t)
 	vm, err := d.CreateVM(&driver.CreateConfig{
-		HardwareConfig: driver.HardwareConfig {
-			CPUs: TestCPUs,
+		HardwareConfig: driver.HardwareConfig{
+			CPUs:           TestCPUs,
 			CPUReservation: TestCPUReservation,
-			CPULimit: TestCPULimit,
-			RAM: TestRAM,
+			CPULimit:       TestCPULimit,
+			RAM:            TestRAM,
 			RAMReservation: TestRAMReservation,
-			RAMReserveAll: false,
+			RAMReserveAll:  false,
 		},
 
-		DiskConfig: driver.DiskConfig {
-			DiskSizeKB: 1024,
+		DiskConfig: driver.DiskConfig{
+			DiskSizeKB:      1024 * 1024,
 			ThinProvisioned: true,
+			ControllerType:  "pvscsi",
 		},
 
-		Name: NewVMName(),
-		Host: TestHost,
+		Name:    NewVMName(),
+		Host:    TestHost,
 		GuestOS: "otherGuest",
 	})
 

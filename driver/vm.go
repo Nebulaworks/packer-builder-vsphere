@@ -35,6 +35,7 @@ type HardwareConfig struct {
 type DiskConfig struct {
 	DiskSizeKB      int64
 	ThinProvisioned bool
+	ControllerType  string // ex: "scsi", "pvscsi"
 	// TODO: more settings?
 }
 
@@ -138,8 +139,6 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 	}
 
 	vmRef := taskInfo.Result.(types.ManagedObjectReference)
-
-
 
 	return d.NewVM(&vmRef), nil
 }
@@ -334,7 +333,7 @@ func (config CreateConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 
 func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
 	// TODO: controller type should be customizable
-	device, err := devices.CreateSCSIController("scsi")
+	device, err := devices.CreateSCSIController("pvscsi")
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +391,7 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 }
 
 func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
-		datastore *Datastore) (object.VirtualDeviceList, error) {
+	datastore *Datastore) (object.VirtualDeviceList, error) {
 	// FIXME: doesn't work. See https://github.com/vmware/govmomi/issues/721 and https://sourceforge.net/p/viperltoolkit/support-requests/2/
 	//ideDevice, err := devices.CreateIDEController()
 	//if err != nil {
