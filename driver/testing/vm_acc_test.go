@@ -47,7 +47,7 @@ func TestVMAcc_REMOVEME_create(t *testing.T) {
 	initDriverAcceptanceTest(t)
 
 	d := NewTestDriver(t)
-	_, err := d.CreateVM(&driver.CreateConfig{
+	vm, err := d.CreateVM(&driver.CreateConfig{
 		HardwareConfig: driver.HardwareConfig {
 			CPUs: TestCPUs,
 			CPUReservation: TestCPUReservation,
@@ -62,10 +62,6 @@ func TestVMAcc_REMOVEME_create(t *testing.T) {
 			ThinProvisioned: true,
 		},
 
-		CdromConfig: driver.CdromConfig {
-			ISO: "ISO/alpine-standard-3.6.2-x86_64.iso",
-		},
-
 		Name: NewVMName(),
 		Host: TestHost,
 		GuestOS: "otherGuest",
@@ -74,6 +70,8 @@ func TestVMAcc_REMOVEME_create(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FAIL: %v", err) // FIXME
 	}
+
+	vm.AddCdrom("[datastore1] ISO/alpine-standard-3.6.2-x86_64.iso")
 }
 
 func TestVMAcc_default(t *testing.T) {

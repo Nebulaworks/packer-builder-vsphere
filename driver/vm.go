@@ -38,16 +38,9 @@ type DiskConfig struct {
 	// TODO: more settings?
 }
 
-type CdromConfig struct {
-	ISO          string
-	//ISODatastore string
-	// TODO: more settings?
-}
-
 type CreateConfig struct {
 	HardwareConfig
 	DiskConfig
-	CdromConfig
 
 	Annotation   string
 	Name         string
@@ -145,6 +138,9 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 	}
 
 	vmRef := taskInfo.Result.(types.ManagedObjectReference)
+
+
+
 	return d.NewVM(&vmRef), nil
 }
 
@@ -413,6 +409,35 @@ func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
 	//
 	//cdrom = devices.InsertIso(cdrom, datastore.Path(config.ISO))
 	//devices = append(devices, cdrom)
-	//
+
 	return devices, nil
+}
+
+func (vm *VirtualMachine) AddCdrom(isoPath string) error {
+	devices, err := vm.vm.Device(vm.driver.ctx)
+	if err != nil {
+		return err
+	}
+	ide, err := devices.FindIDEController("")
+	if err != nil {
+		return err
+	}
+
+	cdrom, err := devices.CreateCdrom(ide)
+	if err != nil {
+		return err
+	}
+
+	cdrom = devices.InsertIso(cdrom, isoPath)
+	newDevices := object.VirtualDeviceList{cdrom}
+	confSpec := types.VirtualMachineConfigSpec{}
+	confSpec.DeviceChange, err = newDevices.ConfigSpec(types.VirtualDeviceConfigSpecOperationAdd)
+
+	task, err := vm.vm.Reconfigure(vm.driver.ctx, confSpec)
+	if err != nil {
+		return err
+	}
+
+	_, err = task.WaitForResult(vm.driver.ctx, nil)
+	return err
 }
