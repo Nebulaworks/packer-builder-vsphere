@@ -50,6 +50,7 @@ type CreateConfig struct {
 	ResourcePool string
 	Datastore    string
 	GuestOS      string // def: otherGuest
+	Network      string
 	Force        bool
 }
 
@@ -366,10 +367,8 @@ func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) 
 }
 
 func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
-	// TODO: settings
-	// FIXME: low-level calls shouldn't be here
-	// TODO: add customization. Use `NetworkOrDefault` function
-	network, err := d.finder.DefaultNetwork(d.ctx)
+	// FIXME: low-level calls shouldn't be here. Consider creating new class in driver
+	network, err := d.finder.NetworkOrDefault(d.ctx, config.Network)
 	if err != nil {
 		return nil, err
 	}
@@ -391,14 +390,14 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 }
 
 func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
-	datastore *Datastore) (object.VirtualDeviceList, error) {
-	// FIXME: doesn't work. See https://github.com/vmware/govmomi/issues/721 and https://sourceforge.net/p/viperltoolkit/support-requests/2/
-	//ideDevice, err := devices.CreateIDEController()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//devices = append(devices, ideDevice)
-	//
+		datastore *Datastore) (object.VirtualDeviceList, error) {
+	ideDevice, err := devices.CreateIDEController()
+	if err != nil {
+		return nil, err
+	}
+	devices = append(devices, ideDevice)
+
+	// FIXME: Doesn't work. See https://github.com/vmware/govmomi/issues/721 and https://sourceforge.net/p/viperltoolkit/support-requests/2/
 	//ide := ideDevice.(*types.VirtualIDEController)
 	//ide.Key = -21
 	//cdrom, err := devices.CreateCdrom(ide)

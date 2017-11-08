@@ -1,12 +1,13 @@
-package main
+package clone
 
 import (
 	"errors"
 
-	"github.com/hashicorp/packer/common"
+	packerCommon "github.com/hashicorp/packer/common"
 	"github.com/hashicorp/packer/helper/communicator"
 	"github.com/hashicorp/packer/packer"
 	"github.com/jetbrains-infra/packer-builder-vsphere/driver"
+	"github.com/jetbrains-infra/packer-builder-vsphere/common"
 	"github.com/mitchellh/multistep"
 )
 
@@ -27,13 +28,14 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 
 func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packer.Artifact, error) {
 	state := new(multistep.BasicStateBag)
+	state.Put("comm", &b.config.Comm)
 	state.Put("config", b.config)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
 
 	steps := []multistep.Step{
-		&StepConnect{
-			config: &b.config.ConnectConfig,
+		&common.StepConnect{
+			Config: &b.config.ConnectConfig,
 		},
 		&StepCloneVM{
 			config: &b.config.CloneConfig,
@@ -41,26 +43,26 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		&StepConfigureHardware{
 			config: &b.config.HardwareConfig,
 		},
-		&StepRun{},
+		&common.StepRun{},
 		&communicator.StepConnect{
 			Config:    &b.config.Comm,
-			Host:      commHost,
-			SSHConfig: sshConfig,
+			Host:      common.CommHost,
+			SSHConfig: common.SshConfig,
 		},
-		&common.StepProvision{},
-		&StepShutdown{
-			config: &b.config.ShutdownConfig,
+		&packerCommon.StepProvision{},
+		&common.StepShutdown{
+			Config: &b.config.ShutdownConfig,
 		},
-		&StepCreateSnapshot{
-			createSnapshot: b.config.CreateSnapshot,
+		&common.StepCreateSnapshot{
+			CreateSnapshot: b.config.CreateSnapshot,
 		},
-		&StepConvertToTemplate{
+		&common.StepConvertToTemplate{
 			ConvertToTemplate: b.config.ConvertToTemplate,
 		},
 	}
 
 	// Run!
-	b.runner = common.NewRunner(steps, b.config.PackerConfig, ui)
+	b.runner = packerCommon.NewRunner(steps, b.config.PackerConfig, ui)
 	b.runner.Run(state)
 
 	// If there was an error, return that
@@ -77,7 +79,7 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		return nil, errors.New("Build was halted.")
 	}
 
-	artifact := &Artifact{
+	artifact := &common.Artifact{
 		Name: b.config.VMName,
 		VM:   state.Get("vm").(*driver.VirtualMachine),
 	}
