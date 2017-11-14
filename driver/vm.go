@@ -308,7 +308,6 @@ func (vm *VirtualMachine) ConvertToTemplate() error {
 
 func (config HardwareConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 	var confSpec types.VirtualMachineConfigSpec
-
 	confSpec.NumCPUs = config.CPUs
 	confSpec.MemoryMB = config.RAM
 
@@ -320,6 +319,8 @@ func (config HardwareConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 	var ramSpec types.ResourceAllocationInfo
 	ramSpec.Reservation = config.RAMReservation
 	confSpec.MemoryAllocation = &ramSpec
+
+	confSpec.MemoryReservationLockedToMax = &config.RAMReserveAll
 
 	return confSpec
 }
