@@ -36,7 +36,6 @@ type DiskConfig struct {
 	DiskSizeKB      int64
 	ThinProvisioned bool
 	ControllerType  string // ex: "scsi", "pvscsi"
-	// TODO: more settings?
 }
 
 type CreateConfig struct {
@@ -89,12 +88,12 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 
 	host, err := d.FindHost(config.Host)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	datastore, err := d.FindDatastoreOrDefault(config.Datastore)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 
 	// Don't override existing file if parameter "Force" is not specified
@@ -132,7 +131,7 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 
 	task, err := folder.folder.CreateVM(d.ctx, createSpec, resourcePool.pool, host.host)
 	if err != nil {
-		return nil, err // TODO
+		return nil, err
 	}
 	taskInfo, err := task.WaitForResult(d.ctx, nil)
 	if err != nil {
@@ -334,8 +333,7 @@ func (config CreateConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 }
 
 func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
-	// TODO: controller type should be customizable
-	device, err := devices.CreateSCSIController("pvscsi")
+	device, err := devices.CreateSCSIController(config.ControllerType)
 	if err != nil {
 		return nil, err
 	}
@@ -368,13 +366,11 @@ func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) 
 }
 
 func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
-	// FIXME: low-level calls shouldn't be here. Consider creating new class in driver
 	network, err := d.finder.NetworkOrDefault(d.ctx, config.Network)
 	if err != nil {
 		return nil, err
 	}
 
-	// FIXME: what is this?
 	backing, err := network.EthernetCardBackingInfo(d.ctx)
 	if err != nil {
 		return nil, err
@@ -386,7 +382,6 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 	}
 
 	// TODO: add address customization
-
 	return append(devices, device), nil
 }
 
@@ -397,17 +392,6 @@ func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
 		return nil, err
 	}
 	devices = append(devices, ideDevice)
-
-	// FIXME: Doesn't work. See https://github.com/vmware/govmomi/issues/721 and https://sourceforge.net/p/viperltoolkit/support-requests/2/
-	//ide := ideDevice.(*types.VirtualIDEController)
-	//ide.Key = -21
-	//cdrom, err := devices.CreateCdrom(ide)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//cdrom = devices.InsertIso(cdrom, datastore.Path(config.ISO))
-	//devices = append(devices, cdrom)
 
 	return devices, nil
 }
