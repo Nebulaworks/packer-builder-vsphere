@@ -1,4 +1,4 @@
-package clone
+package common
 
 import (
 	"github.com/mitchellh/multistep"
@@ -28,24 +28,24 @@ func (c *HardwareConfig) Prepare() []error {
 }
 
 type StepConfigureHardware struct {
-	config *HardwareConfig
+	Config *HardwareConfig
 }
 
 func (s *StepConfigureHardware) Run(state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packer.Ui)
 	vm := state.Get("vm").(*driver.VirtualMachine)
 
-	if *s.config != (HardwareConfig{}) {
+	if *s.Config != (HardwareConfig{}) {
 		ui.Say("Customizing hardware parameters...")
 
 		err := vm.Configure(&driver.HardwareConfig{
-			CPUs:           s.config.CPUs,
-			CPUReservation: s.config.CPUReservation,
-			CPULimit:       s.config.CPULimit,
-			RAM:            s.config.RAM,
-			RAMReservation: s.config.RAMReservation,
-			RAMReserveAll:  s.config.RAMReserveAll,
-			DiskSize:       s.config.DiskSize,
+			CPUs:           s.Config.CPUs,
+			CPUReservation: s.Config.CPUReservation,
+			CPULimit:       s.Config.CPULimit,
+			RAM:            s.Config.RAM,
+			RAMReservation: s.Config.RAMReservation,
+			RAMReserveAll:  s.Config.RAMReserveAll,
+			DiskSize:       s.Config.DiskSize,
 		})
 		if err != nil {
 			state.Put("error", err)

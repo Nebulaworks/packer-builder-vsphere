@@ -36,7 +36,7 @@ type HardwareConfig struct {
 type DiskConfig struct {
 	DiskSizeKB      int64
 	ThinProvisioned bool
-	ControllerType  string // ex: "scsi", "pvscsi"
+	ControllerType  string // example: "scsi", "pvscsi"
 }
 
 type CreateConfig struct {
@@ -49,7 +49,7 @@ type CreateConfig struct {
 	Host         string
 	ResourcePool string
 	Datastore    string
-	GuestOS      string // def: otherGuest
+	GuestOS      string // default: otherGuest
 	Network      string
 	Force        bool
 }
