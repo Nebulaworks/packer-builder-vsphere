@@ -27,6 +27,18 @@ func (c *HardwareConfig) Prepare() []error {
 	return errs
 }
 
+func (c *HardwareConfig) ToDriverConfig() driver.HardwareConfig {
+	return driver.HardwareConfig{
+		CPUs:           c.CPUs,
+		CPUReservation: c.CPUReservation,
+		CPULimit:       c.CPULimit,
+		RAM:            c.RAM,
+		RAMReservation: c.RAMReservation,
+		RAMReserveAll:  c.RAMReserveAll,
+		DiskSize:       c.DiskSize,
+	}
+}
+
 type StepConfigureHardware struct {
 	Config *HardwareConfig
 }
@@ -38,15 +50,8 @@ func (s *StepConfigureHardware) Run(state multistep.StateBag) multistep.StepActi
 	if *s.Config != (HardwareConfig{}) {
 		ui.Say("Customizing hardware parameters...")
 
-		err := vm.Configure(&driver.HardwareConfig{
-			CPUs:           s.Config.CPUs,
-			CPUReservation: s.Config.CPUReservation,
-			CPULimit:       s.Config.CPULimit,
-			RAM:            s.Config.RAM,
-			RAMReservation: s.Config.RAMReservation,
-			RAMReserveAll:  s.Config.RAMReserveAll,
-			DiskSize:       s.Config.DiskSize,
-		})
+		driverConfig := s.Config.ToDriverConfig()
+		err := vm.Configure(&driverConfig)
 		if err != nil {
 			state.Put("error", err)
 			return multistep.ActionHalt
