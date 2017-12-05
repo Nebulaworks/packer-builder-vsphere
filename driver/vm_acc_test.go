@@ -66,13 +66,11 @@ func TestVMAcc_create(t *testing.T) {
 			RAM:            2048,
 			RAMReservation: 1024,
 			RAMReserveAll:  false,
+			DiskSize:       2,
 		},
 
-		DiskConfig: DiskConfig{
-			DiskSizeKB:      1024 * 1024,
-			ThinProvisioned: true,
-			ControllerType:  "pvscsi",
-		},
+		DiskThinProvisioned: true,
+		DiskControllerType:  "pvscsi",
 
 		Name:    newVMName(),
 		Host:    TestHostName,

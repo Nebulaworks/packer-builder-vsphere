@@ -33,15 +33,11 @@ type HardwareConfig struct {
 	DiskSize       int64
 }
 
-type DiskConfig struct {
-	DiskSizeKB      int64
-	ThinProvisioned bool
-	ControllerType  string // example: "scsi", "pvscsi"
-}
-
 type CreateConfig struct {
 	HardwareConfig
-	DiskConfig
+
+	DiskThinProvisioned bool
+	DiskControllerType  string // example: "scsi", "pvscsi"
 
 	Annotation   string
 	Name         string
@@ -237,7 +233,7 @@ func (vm *VirtualMachine) Configure(config *HardwareConfig) error {
 			return err
 		}
 
-		disk.CapacityInKB = config.DiskSize * 1024 * 1024 // Gb
+		disk.CapacityInKB = convertGiB2KiB(config.DiskSize)
 
 		confSpec.DeviceChange = []types.BaseVirtualDeviceConfigSpec{
 			&types.VirtualDeviceConfigSpec{
@@ -373,7 +369,7 @@ func (config CreateConfig) toConfigSpec() types.VirtualMachineConfigSpec {
 }
 
 func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
-	device, err := devices.CreateSCSIController(config.ControllerType)
+	device, err := devices.CreateSCSIController(config.DiskControllerType)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +379,7 @@ func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) 
 		return nil, err
 	}
 
-	if config.DiskSizeKB == 0 {
+	if config.DiskSize == 0 {
 		// TODO
 		return nil, fmt.Errorf("not implemented")
 	}
@@ -393,10 +389,10 @@ func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) 
 			Key: devices.NewKey(),
 			Backing: &types.VirtualDiskFlatVer2BackingInfo{
 				DiskMode:        string(types.VirtualDiskModePersistent), // TODO: should be customizable?
-				ThinProvisioned: types.NewBool(config.ThinProvisioned),
+				ThinProvisioned: types.NewBool(config.DiskThinProvisioned),
 			},
 		},
-		CapacityInKB: config.DiskSizeKB,
+		CapacityInKB: convertGiB2KiB(config.DiskSize),
 	}
 
 	devices.AssignController(disk, controller)
@@ -426,7 +422,7 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 }
 
 func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
-		datastore *Datastore) (object.VirtualDeviceList, error) {
+	datastore *Datastore) (object.VirtualDeviceList, error) {
 	ideDevice, err := devices.CreateIDEController()
 	if err != nil {
 		return nil, err
@@ -463,4 +459,8 @@ func (vm *VirtualMachine) AddCdrom(isoPath string) error {
 
 	_, err = task.WaitForResult(vm.driver.ctx, nil)
 	return err
+}
+
+func convertGiB2KiB(gib int64) int64 {
+	return gib * 1024 * 1024
 }
