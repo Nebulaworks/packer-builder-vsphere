@@ -46,7 +46,6 @@ type CreateConfig struct {
 	ResourcePool string
 	Datastore    string
 	GuestOS      string // default: otherGuest
-	Network      string
 	Force        bool
 }
 
@@ -104,7 +103,7 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 
 	devices := object.VirtualDeviceList{}
 
-	devices, err = addCdrom(d, devices, config, datastore)
+	devices, err = addIDE(devices)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +111,7 @@ func (d *Driver) CreateVM(config *CreateConfig) (*VirtualMachine, error) {
 	if err != nil {
 		return nil, err
 	}
-	devices, err = addNetwork(d, devices, config)
+	devices, err = addNetwork(d, devices)
 	if err != nil {
 		return nil, err
 	}
@@ -401,8 +400,8 @@ func addDisk(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) 
 	return devices, nil
 }
 
-func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfig) (object.VirtualDeviceList, error) {
-	network, err := d.finder.NetworkOrDefault(d.ctx, config.Network)
+func addNetwork(d *Driver, devices object.VirtualDeviceList) (object.VirtualDeviceList, error) {
+	network, err := d.finder.DefaultNetwork(d.ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -421,8 +420,7 @@ func addNetwork(d *Driver, devices object.VirtualDeviceList, config *CreateConfi
 	return append(devices, device), nil
 }
 
-func addCdrom(d *Driver, devices object.VirtualDeviceList, config *CreateConfig,
-	datastore *Datastore) (object.VirtualDeviceList, error) {
+func addIDE(devices object.VirtualDeviceList) (object.VirtualDeviceList, error) {
 	ideDevice, err := devices.CreateIDEController()
 	if err != nil {
 		return nil, err
