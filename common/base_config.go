@@ -10,7 +10,6 @@ import (
 type BaseConfig struct {
 	packerCommon.PackerConfig `mapstructure:",squash"`
 	ConnectConfig             `mapstructure:",squash"`
-	HardwareConfig            `mapstructure:",squash"`
 	Comm                      communicator.Config `mapstructure:",squash"`
 	ShutdownConfig            `mapstructure:",squash"`
 	CreateSnapshot            bool `mapstructure:"create_snapshot"`
@@ -29,7 +28,6 @@ func (c *BaseConfig) Prepare(ctx *interpolate.Context) []error {
 	var errs []error
 	errs = append(errs, c.Comm.Prepare(ctx)...)
 	errs = append(errs, c.ConnectConfig.Prepare()...)
-	errs = append(errs, c.HardwareConfig.Prepare()...)
 	errs = append(errs, c.ShutdownConfig.Prepare()...)
 
 	return errs

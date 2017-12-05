@@ -1,6 +1,7 @@
 package iso
 
 import (
+	"errors"
 	"fmt"
 	"github.com/hashicorp/packer/packer"
 	"github.com/jetbrains-infra/packer-builder-vsphere/common"
@@ -8,33 +9,69 @@ import (
 	"github.com/mitchellh/multistep"
 )
 
-type CreateConfig struct {
-	VMName              string `mapstructure:"vm_name"`
-	Folder              string `mapstructure:"folder"`
-	Host                string `mapstructure:"host"`
-	ResourcePool        string `mapstructure:"resource_pool"`
-	Datastore           string `mapstructure:"datastore"`
-	DiskThinProvisioned bool   `mapstructure:"disk_thin_provisioned"`
-	DiskControlledType  string `mapstructure:"disk_controller_type"`
-	GuestOS             string `mapstructure:"guest_os"`
+type HardwareConfig struct {
+	common.BaseHardwareConfig `mapstructure:",squash"`
+	DiskThinProvisioned       bool   `mapstructure:"disk_thin_provisioned"`
+	DiskControlledType        string `mapstructure:"disk_controller_type"`
 }
 
-func (c *CreateConfig) Prepare() []error {
+func (c *HardwareConfig) Prepare() []error {
 	var errs []error
 
-	if c.VMName == "" {
-		errs = append(errs, fmt.Errorf("Target VM name is required"))
-	}
-	if c.Host == "" {
-		errs = append(errs, fmt.Errorf("vSphere host is required"))
+	errs = append(errs, c.BaseHardwareConfig.Prepare()...)
+
+	if c.DiskSize <= 0 {
+		errs = append(errs, errors.New("Disk size is required"))
 	}
 
 	return errs
 }
 
+type CreateConfig struct {
+	HardwareConfig `mapstructure:",squash"`
+
+	VMName       string `mapstructure:"vm_name"`
+	Folder       string `mapstructure:"folder"`
+	Host         string `mapstructure:"host"`
+	ResourcePool string `mapstructure:"resource_pool"`
+	Datastore    string `mapstructure:"datastore"`
+	GuestOSType  string `mapstructure:"guest_os_type"`
+}
+
+func (c *CreateConfig) Prepare() []error {
+	var errs []error
+
+	// needed to avoid changing the original config in case of errors
+	tmp := *c
+
+	// do recursive calls
+	errs = append(errs, tmp.HardwareConfig.Prepare()...)
+
+	// check for errors
+	if tmp.VMName == "" {
+		errs = append(errs, fmt.Errorf("Target VM name is required"))
+	}
+	if tmp.Host == "" {
+		errs = append(errs, fmt.Errorf("vSphere host is required"))
+	}
+
+	if len(errs) > 0 {
+		return errs
+	}
+
+	// set default values
+	if tmp.GuestOSType == "" {
+		tmp.GuestOSType = "otherGuest"
+	}
+
+	// change the original config
+	*c = tmp
+
+	return []error{}
+}
+
 type StepCreateVM struct {
-	hardwareConfig *common.HardwareConfig
-	config         *CreateConfig
+	config *CreateConfig
 }
 
 func (s *StepCreateVM) Run(state multistep.StateBag) multistep.StepAction {
@@ -44,7 +81,7 @@ func (s *StepCreateVM) Run(state multistep.StateBag) multistep.StepAction {
 	ui.Say("Creating VM...")
 
 	vm, err := d.CreateVM(&driver.CreateConfig{
-		HardwareConfig: s.hardwareConfig.ToDriverConfig(),
+		HardwareConfig: s.config.HardwareConfig.ToDriverHardwareConfig(),
 
 		DiskThinProvisioned: s.config.DiskThinProvisioned,
 		DiskControllerType:  s.config.DiskControlledType,
@@ -53,7 +90,7 @@ func (s *StepCreateVM) Run(state multistep.StateBag) multistep.StepAction {
 		Host:                s.config.Host,
 		ResourcePool:        s.config.ResourcePool,
 		Datastore:           s.config.Datastore,
-		GuestOS:             s.config.GuestOS,
+		GuestOS:             s.config.GuestOSType,
 	})
 
 	if err != nil {
