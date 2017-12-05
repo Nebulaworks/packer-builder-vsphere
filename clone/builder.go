@@ -29,7 +29,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packer.Artifact, error) {
 	state := new(multistep.BasicStateBag)
 	state.Put("comm", &b.config.Comm)
-	state.Put("config", b.config)
 	state.Put("hook", hook)
 	state.Put("ui", ui)
 
