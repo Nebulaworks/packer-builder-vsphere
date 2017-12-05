@@ -9,8 +9,6 @@ import (
 )
 
 type CreateConfig struct {
-	//ISODatastore        string `mapstructure:"iso_datastore"`
-	//ISOPath             string `mapstructure:"iso_path"`
 	VMName              string `mapstructure:"vm_name"`
 	Folder              string `mapstructure:"folder"`
 	Host                string `mapstructure:"host"`
