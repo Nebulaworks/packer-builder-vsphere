@@ -41,17 +41,14 @@ type CreateConfig struct {
 func (c *CreateConfig) Prepare() []error {
 	var errs []error
 
-	// needed to avoid changing the original config in case of errors
-	tmp := *c
-
 	// do recursive calls
-	errs = append(errs, tmp.HardwareConfig.Prepare()...)
+	errs = append(errs, c.HardwareConfig.Prepare()...)
 
 	// check for errors
-	if tmp.VMName == "" {
+	if c.VMName == "" {
 		errs = append(errs, fmt.Errorf("Target VM name is required"))
 	}
-	if tmp.Host == "" {
+	if c.Host == "" {
 		errs = append(errs, fmt.Errorf("vSphere host is required"))
 	}
 
@@ -60,12 +57,9 @@ func (c *CreateConfig) Prepare() []error {
 	}
 
 	// set default values
-	if tmp.GuestOSType == "" {
-		tmp.GuestOSType = "otherGuest"
+	if c.GuestOSType == "" {
+		c.GuestOSType = "otherGuest"
 	}
-
-	// change the original config
-	*c = tmp
 
 	return []error{}
 }

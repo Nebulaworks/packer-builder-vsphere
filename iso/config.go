@@ -9,6 +9,7 @@ import (
 type Config struct {
 	common.BaseConfig `mapstructure:",squash"`
 	CreateConfig      `mapstructure:",squash"`
+	CDRomConfig       `mapstructure:",squash"`
 	ctx interpolate.Context
 }
 
@@ -24,6 +25,7 @@ func NewConfig(raws ...interface{}) (*Config, []string, error) {
 	errs := new(packer.MultiError)
 	errs = packer.MultiErrorAppend(errs, c.BaseConfig.Prepare(&c.ctx)...)
 	errs = packer.MultiErrorAppend(errs, c.CreateConfig.Prepare()...)
+	errs = packer.MultiErrorAppend(errs, c.CDRomConfig.Prepare()...)
 
 	if len(errs.Errors) > 0 {
 		return nil, nil, errs

@@ -4,8 +4,6 @@ import (
 	builderT "github.com/hashicorp/packer/helper/builder/testing"
 	commonT "github.com/jetbrains-infra/packer-builder-vsphere/common/testing"
 
-	"fmt"
-	"math/rand"
 	"testing"
 )
 
@@ -26,8 +24,9 @@ func defaultConfig() map[string]interface{} {
 
 		"host": "esxi-1.vsphere55.test",
 
-		"vm_name":   fmt.Sprintf("test-%v", rand.Intn(1000)),
+		"vm_name":   commonT.NewVMName(),
 		"disk_size": 2,
+		"iso_path": "[datastore1] ISO/alpine-standard-3.6.2-x86_64.iso",
 
 		"ssh_username": "root",
 		"ssh_password": "jetbrains",

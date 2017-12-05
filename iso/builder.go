@@ -4,8 +4,8 @@ import (
 	packerCommon "github.com/hashicorp/packer/common"
 	"github.com/hashicorp/packer/packer"
 	"github.com/jetbrains-infra/packer-builder-vsphere/common"
-	"github.com/jetbrains-infra/packer-builder-vsphere/driver"
 	"github.com/mitchellh/multistep"
+	"github.com/jetbrains-infra/packer-builder-vsphere/driver"
 )
 
 type Builder struct {
@@ -35,6 +35,9 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		},
 		&StepCreateVM{
 			config:         &b.config.CreateConfig,
+		},
+		&StepAddCDRom{
+			config: &b.config.CDRomConfig,
 		},
 		/*&common.StepRun{},
 		&communicator.StepConnect{

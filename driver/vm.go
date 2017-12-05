@@ -445,7 +445,10 @@ func (vm *VirtualMachine) AddCdrom(isoPath string) error {
 		return err
 	}
 
-	cdrom = devices.InsertIso(cdrom, isoPath)
+	if isoPath != "" {
+		cdrom = devices.InsertIso(cdrom, isoPath)
+	}
+
 	newDevices := object.VirtualDeviceList{cdrom}
 	confSpec := types.VirtualMachineConfigSpec{}
 	confSpec.DeviceChange, err = newDevices.ConfigSpec(types.VirtualDeviceConfigSpecOperationAdd)
